@@ -25,17 +25,31 @@ searchInput.addEventListener("keypress", function (e) {
 // Show random recipes feed on page load
 window.addEventListener("DOMContentLoaded", showRandomFeed);
 
-// Optional: Add a refresh button for random feed
+// Add a refresh button for random feed
 let randomFeedBtn = document.createElement("button");
 randomFeedBtn.textContent = "Show More Random Recipes";
 randomFeedBtn.className = "random-feed-btn";
 randomFeedBtn.addEventListener("click", showRandomFeed);
 mealsContainer.parentNode.insertBefore(randomFeedBtn, mealsContainer.nextSibling);
+
+// Add a show more search results button
+let showMoreSearchBtn = document.createElement("button");
+showMoreSearchBtn.textContent = "Show More Search Results";
+showMoreSearchBtn.className = "random-feed-btn";
+showMoreSearchBtn.style.display = "none";
+showMoreSearchBtn.addEventListener("click", showMoreSearchResults);
+mealsContainer.parentNode.insertBefore(showMoreSearchBtn, randomFeedBtn.nextSibling);
+
+let searchResults = [];
+let searchResultsIndex = 0;
+const SEARCH_PAGE_SIZE = 8;
 // Show a feed of random recipes
 async function showRandomFeed() {
     resultHeading.textContent = "Random Recipes For You:";
     mealsContainer.innerHTML = "";
     errorContainer.classList.add("hidden");
+    randomFeedBtn.style.display = "block";
+    showMoreSearchBtn.style.display = "none";
     let randomMeals = [];
     let mealIds = new Set();
     // Fetch 8 unique random meals
@@ -62,6 +76,7 @@ async function searchMeals() {
         return;
     }
     try {
+        randomFeedBtn.style.display = "none";
         resultHeading.textContent = `Searching for "${searchTerm}"...`;
         mealsContainer.innerHTML = "";
         errorContainer.classList.add("hidden");
@@ -77,15 +92,34 @@ async function searchMeals() {
             mealsContainer.innerHTML = "";
             errorContainer.textContent = `No recipes found for "${searchTerm}". Try another search term!`;
             errorContainer.classList.remove("hidden");
+            showMoreSearchBtn.style.display = "none";
         } else {
             resultHeading.textContent = `Search results for "${searchTerm}":`;
-            displayMeals(data.meals);
+            searchResults = data.meals;
+            searchResultsIndex = 0;
+            displaySearchResultsPage();
             searchInput.value = "";
         }
     } catch (error) {
         errorContainer.textContent = "Something went wrong. Please try again later.";
         errorContainer.classList.remove("hidden");
+        showMoreSearchBtn.style.display = "none";
     }
+}
+
+function displaySearchResultsPage() {
+    const page = searchResults.slice(searchResultsIndex, searchResultsIndex + SEARCH_PAGE_SIZE);
+    displayMeals(page);
+    searchResultsIndex += SEARCH_PAGE_SIZE;
+    if (searchResultsIndex < searchResults.length) {
+        showMoreSearchBtn.style.display = "block";
+    } else {
+        showMoreSearchBtn.style.display = "none";
+    }
+}
+
+function showMoreSearchResults() {
+    displaySearchResultsPage();
 }
 
 function displayMeals(meals) {
