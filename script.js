@@ -34,7 +34,7 @@ mealsContainer.parentNode.insertBefore(randomFeedBtn, mealsContainer.nextSibling
 
 // Add a show more search results button
 let showMoreSearchBtn = document.createElement("button");
-showMoreSearchBtn.textContent = "Show More Search Results";
+showMoreSearchBtn.textContent = "Show More Recipes";
 showMoreSearchBtn.className = "random-feed-btn";
 showMoreSearchBtn.style.display = "none";
 showMoreSearchBtn.addEventListener("click", showMoreSearchResults);
@@ -43,6 +43,33 @@ mealsContainer.parentNode.insertBefore(showMoreSearchBtn, randomFeedBtn.nextSibl
 let searchResults = [];
 let searchResultsIndex = 0;
 const SEARCH_PAGE_SIZE = 8;
+
+// For recommended recipe below ingredients
+let recommendedMeal = null;
+async function getRecommendedRecipeHTML() {
+    try {
+        const recRes = await fetch(`${BASE_URL}random.php`);
+        const recData = await recRes.json();
+        if (recData.meals && recData.meals.length > 0) {
+            recommendedMeal = recData.meals[0];
+            return `
+            <div class="recommended-recipes">
+                <h3>Recommended Recipe</h3>
+                <div class="recommended-list">
+                    <div class="recommended-item" data-meal-id="${recommendedMeal.idMeal}">
+                        <img src="${recommendedMeal.strMealThumb}" alt="${recommendedMeal.strMeal}" />
+                        <div class="recommended-title">${recommendedMeal.strMeal}</div>
+                    </div>
+                </div>
+                <button class="random-feed-btn recommended-refresh-btn" style="margin-top:1.2rem;">Show Another Recommended Recipe</button>
+            </div>
+            `;
+        }
+    } catch (e) {
+        return "";
+    }
+    return "";
+}
 // Show a feed of random recipes
 async function showRandomFeed() {
     resultHeading.textContent = "Random Recipes For You:";
@@ -161,33 +188,10 @@ async function handleMealClick(e) {
                 }
             }
              
-            // Fetch recommended recipes (random meals)
-            let recommendedHTML = "";
-            try {
-                const recRes = await fetch(`${BASE_URL}random.php`);
-                const recData = await recRes.json();
-                if (recData.meals && recData.meals.length > 0) {
-                    recommendedHTML = `
-                    <div class="recommended-recipes">
-                        <h3>Recommended Recipe</h3>
-                        <div class="recommended-list">
-                            ${recData.meals
-                                .map(
-                                    (rec) => `
-                                        <div class="recommended-item" data-meal-id="${rec.idMeal}">
-                                            <img src="${rec.strMealThumb}" alt="${rec.strMeal}" />
-                                            <div class="recommended-title">${rec.strMeal}</div>
-                                        </div>
-                                    `
-                                )
-                                .join("")}
-                        </div>
-                    </div>
-                    `;
-                }
-            } catch (e) {
-                // ignore recommended fetch errors
-            }
+
+
+            // Fetch recommended recipe (single random meal)
+            let recommendedHTML = await getRecommendedRecipeHTML();
 
             mealDetailsContent.innerHTML = `
         <img src="${meal.strMealThumb}" alt="${meal.strMeal}" class="meal-details-img">
@@ -222,19 +226,29 @@ async function handleMealClick(e) {
         }
         ${recommendedHTML}
       `;
-        mealDetails.classList.remove("hidden");
-        mealDetails.scrollIntoView({ behavior: "smooth" });
+            mealDetails.classList.remove("hidden");
+            mealDetails.scrollIntoView({ behavior: "smooth" });
         }
-        // Add click event for recommended recipe
-        const recList = mealDetailsContent.querySelector('.recommended-list');
-        if (recList) {
-            recList.addEventListener('click', function(ev) {
+        // Event delegation for recommended recipe click and refresh
+        if (!mealDetailsContent._recHandlerAttached) {
+            mealDetailsContent.addEventListener('click', async function(ev) {
                 const recEl = ev.target.closest('.recommended-item');
-                if (recEl) {
-                    // Simulate click on recommended recipe
+                if (recEl && recEl.dataset.mealId) {
                     handleMealClick({ target: recEl });
+                    return;
+                }
+                const recRefreshBtn = ev.target.closest('.recommended-refresh-btn');
+                if (recRefreshBtn) {
+                    recRefreshBtn.disabled = true;
+                    recRefreshBtn.textContent = 'Loading...';
+                    const newHTML = await getRecommendedRecipeHTML();
+                    const recSection = mealDetailsContent.querySelector('.recommended-recipes');
+                    if (recSection) {
+                        recSection.outerHTML = newHTML;
+                    }
                 }
             });
+            mealDetailsContent._recHandlerAttached = true;
         }
     } catch (error) {
         // Optionally handle error
