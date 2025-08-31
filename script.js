@@ -84,13 +84,13 @@ async function handleMealClick(e) {
 
             const ingredients = [];
             for(let i = 1; i <= 20; i++) {
-             if(meal[`strIngredient${i}`] && meal[`strIngredient${i}`].trim() !== "") {
-                ingredients.push({
-                    ingredients: meal[`strIngredient${i}`],
-                    measure: meal[`strMeasure${i}`]
-                })
-             }
-            }    
+                if(meal[`strIngredient${i}`] && meal[`strIngredient${i}`].trim() !== "") {
+                    ingredients.push({
+                        ingredient: meal[`strIngredient${i}`],
+                        measure: meal[`strMeasure${i}`]
+                    });
+                }
+            }
              
             mealDetailsContent.innerHTML = `
         <img src="${meal.strMealThumb}" alt="${meal.strMeal}" class="meal-details-img">
